@@ -7,33 +7,69 @@
 //
 
 import UIKit
+import MBProgressHUD
 
-class RestaurantsList: UIViewController, UITableViewDelegate, UITableViewDataSource {
+class RestaurantsList: UIViewController, UITableViewDelegate, UITableViewDataSource, FilterListDelegate {
 
     @IBOutlet weak var restaurantsList: UITableView!
+    
     var businesses: [Business]?
     var filteredBusinesses: [Business]?
     let searchController = UISearchController(searchResultsController: nil)
     
     override func viewDidLoad() {
         super.viewDidLoad()
+        self.automaticallyAdjustsScrollViewInsets = false
+        
+        // Pull to refresh
+        let refreshControl = UIRefreshControl()
+        refreshControl.addTarget(self, action: #selector(refreshControlAction(_:)), for: UIControlEvents.valueChanged)
+        restaurantsList.insertSubview(refreshControl, at: 0)
+        
         restaurantsList.delegate = self
         restaurantsList.dataSource = self
         restaurantsList.estimatedRowHeight = 100
         restaurantsList.rowHeight = UITableViewAutomaticDimension
         
-        Business.search(with: "Americans") { (businesses: [Business]?, error: Error?) in
+        // Display HUD right before the request is made
+        let loadingNotification = MBProgressHUD.showAdded(to: self.view, animated: true)
+        loadingNotification.label.text = "Loading Restaurant"
+        
+        Business.search(with: "restaurants") { (businesses: [Business]?, error: Error?) in
             if let businesses = businesses {
                 self.businesses = businesses
                 self.restaurantsList.reloadData()
+                // end refresh controll action when finish fetch data
+                refreshControl.endRefreshing()
+                MBProgressHUD.hide(for: self.view, animated: true)
             }
         }
         
+        // Set up search bar
         searchController.searchResultsUpdater = self
         searchController.dimsBackgroundDuringPresentation = false
         definesPresentationContext = true
-        restaurantsList.tableHeaderView = searchController.searchBar
+        navigationItem.titleView = searchController.searchBar
+        searchController.hidesNavigationBarDuringPresentation = false
         // Do any additional setup after loading the view.
+    }
+    
+    func refreshControlAction(_ refreshControl: UIRefreshControl) {
+        // Display HUD right before the request is made
+        let loadingNotification = MBProgressHUD.showAdded(to: self.view, animated: true)
+        loadingNotification.label.text = "Loading Restaurant"
+        
+        // ... Use the new data to update the data source ...
+        Business.search(with: "restaurants") { (businesses: [Business]?, error: Error?) in
+            if let businesses = businesses {
+                self.businesses = businesses
+                // Reload the tableView now that there is new data
+                self.restaurantsList.reloadData()
+                // Tell the refreshControl to stop spinning
+                refreshControl.endRefreshing()
+                MBProgressHUD.hide(for: self.view, animated: true)
+            }
+        }
     }
 
     override func didReceiveMemoryWarning() {
@@ -59,15 +95,14 @@ class RestaurantsList: UIViewController, UITableViewDelegate, UITableViewDataSou
             business = (businesses?[indexPath.row])!
         }
         
-//        if let businesses = businesses {
-            cell.nameLabel.text = business.name
-            cell.distanceLabel.text = business.distance
-            cell.resImage.setImageWith(business.imageURL!)
-            cell.rateImage.setImageWith(business.ratingImageURL!)
-            cell.reviewLabel.text = (business.reviewCount?.stringValue)! + " Reviews"
-            cell.addLabel.text = business.address
-            cell.cateLabel.text = business.categories
-//        }
+        cell.nameLabel.text = business.name
+        cell.distanceLabel.text = business.distance
+        cell.resImage.setImageWith(business.imageURL!)
+        cell.rateImage.setImageWith(business.ratingImageURL!)
+        cell.reviewLabel.text = (business.reviewCount?.stringValue)! + " Reviews"
+        cell.addLabel.text = business.address
+        cell.cateLabel.text = business.categories
+
         return cell
     }
     
@@ -77,7 +112,24 @@ class RestaurantsList: UIViewController, UITableViewDelegate, UITableViewDataSou
         }
         restaurantsList.reloadData()
     }
-
+    
+    // Delegate from FilterList to get filtered data
+    func filterList(updatedValue filters: [String : AnyObject]) {
+        Business.search(with: "restaurants", distance: filters["distance"] as! Int?, sort: filters["sort"].map { YelpSortMode(rawValue: $0 as! Int) }!, categories: filters["categories"] as! [String]?, deals: filters["deal"] as! Bool?) { (businesses: [Business]?, error: Error?) in
+            if let businesses = businesses {
+                self.businesses = businesses
+                self.restaurantsList.reloadData()
+            }
+        }
+    }
+    
+    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
+        if segue.identifier == "filterSegue" {
+            let filterVC = segue.destination as! FilterList
+            filterVC.delegate = self
+        }
+    }
+    
     /*
     // MARK: - Navigation
 

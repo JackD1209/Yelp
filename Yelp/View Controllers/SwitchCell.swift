@@ -8,9 +8,18 @@
 
 import UIKit
 
+protocol SwitchCellDelegate {
+    func switchCell(switchCell: SwitchCell, didSwitch value: Bool)
+}
+
+
 class SwitchCell: UITableViewCell {
 
     @IBOutlet weak var switchLabel: UILabel!
+    @IBOutlet weak var switchToggle: UISwitch!
+    
+    var delegate: SwitchCellDelegate?
+
     override func awakeFromNib() {
         super.awakeFromNib()
         // Initialization code
@@ -21,5 +30,9 @@ class SwitchCell: UITableViewCell {
 
         // Configure the view for the selected state
     }
-
+    
+    // Delegate to send bool value whenever the swith is togged
+    @IBAction func isSwitched(_ sender: UISwitch) {
+        delegate?.switchCell(switchCell: self, didSwitch: sender.isOn)
+    }
 }
