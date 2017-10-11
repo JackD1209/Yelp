@@ -9,10 +9,11 @@
 import UIKit
 import MBProgressHUD
 
-class RestaurantsList: UIViewController, UITableViewDelegate, UITableViewDataSource, FilterListDelegate {
+class RestaurantsList: UIViewController {
 
     @IBOutlet weak var restaurantsList: UITableView!
     
+    var searchData = searchDataViewModel()
     var businesses: [Business]?
     var filteredBusinesses: [Business]?
     let searchController = UISearchController(searchResultsController: nil)
@@ -77,6 +78,33 @@ class RestaurantsList: UIViewController, UITableViewDelegate, UITableViewDataSou
         // Dispose of any resources that can be recreated.
     }
     
+    func filterContentForSearchText(_ searchText: String) {
+        filteredBusinesses = businesses!.filter { businesse -> Bool in
+            return (businesse.name?.lowercased().contains((searchText.lowercased())))!
+        }
+        restaurantsList.reloadData()
+    }
+    
+    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
+        if segue.identifier == "filterSegue" {
+            let filterVC = segue.destination as! FilterList
+            filterVC.delegate = self
+        }
+    }
+    
+    /*
+    // MARK: - Navigation
+
+    // In a storyboard-based application, you will often want to do a little preparation before navigation
+    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
+        // Get the new view controller using segue.destinationViewController.
+        // Pass the selected object to the new view controller.
+    }
+    */
+
+}
+
+extension RestaurantsList: UITableViewDelegate, UITableViewDataSource {
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         if searchController.isActive && searchController.searchBar.text != "" {
             return filteredBusinesses!.count
@@ -102,44 +130,9 @@ class RestaurantsList: UIViewController, UITableViewDelegate, UITableViewDataSou
         cell.reviewLabel.text = (business.reviewCount?.stringValue)! + " Reviews"
         cell.addLabel.text = business.address
         cell.cateLabel.text = business.categories
-
+        
         return cell
     }
-    
-    func filterContentForSearchText(_ searchText: String) {
-        filteredBusinesses = businesses!.filter { businesse -> Bool in
-            return (businesse.name?.lowercased().contains((searchText.lowercased())))!
-        }
-        restaurantsList.reloadData()
-    }
-    
-    // Delegate from FilterList to get filtered data
-    func filterList(updatedValue filters: [String : AnyObject]) {
-        Business.search(with: "restaurants", distance: filters["distance"] as! Int?, sort: filters["sort"].map { YelpSortMode(rawValue: $0 as! Int) }!, categories: filters["categories"] as! [String]?, deals: filters["deal"] as! Bool?) { (businesses: [Business]?, error: Error?) in
-            if let businesses = businesses {
-                self.businesses = businesses
-                self.restaurantsList.reloadData()
-            }
-        }
-    }
-    
-    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
-        if segue.identifier == "filterSegue" {
-            let filterVC = segue.destination as! FilterList
-            filterVC.delegate = self
-        }
-    }
-    
-    /*
-    // MARK: - Navigation
-
-    // In a storyboard-based application, you will often want to do a little preparation before navigation
-    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
-        // Get the new view controller using segue.destinationViewController.
-        // Pass the selected object to the new view controller.
-    }
-    */
-
 }
 
 extension RestaurantsList: UISearchBarDelegate {
@@ -153,5 +146,18 @@ extension RestaurantsList: UISearchResultsUpdating {
     // MARK: - UISearchResultsUpdating Delegate
     func updateSearchResults(for searchController: UISearchController) {
         filterContentForSearchText(searchController.searchBar.text!)
+    }
+}
+
+extension RestaurantsList: FilterListDelegate {
+    // Delegate from FilterList to get filtered data
+    func filterList(updatedValue filters: [String : AnyObject]) {
+        searchData.convertData(filters["distance"]!, filters["categories"]!, filters["deal"]!)
+        Business.search(with: "restaurants", distance: searchData.datas.distance , sort: filters["sort"].map { YelpSortMode(rawValue: $0 as! Int) }!, categories: searchData.datas.categories, deals: searchData.datas.deal) { (businesses: [Business]?, error: Error?) in
+            if let businesses = businesses {
+                self.businesses = businesses
+                self.restaurantsList.reloadData()
+            }
+        }
     }
 }

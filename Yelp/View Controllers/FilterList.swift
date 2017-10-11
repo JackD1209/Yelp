@@ -12,7 +12,7 @@ protocol FilterListDelegate {
     func filterList(updatedValue filters: [String : AnyObject])
 }
 
-class FilterList: UIViewController, UITableViewDelegate, UITableViewDataSource, DistanceCellDelegate, SortByCellDelegate, SwitchCellDelegate {
+class FilterList: UIViewController {
     
     @IBOutlet weak var filterTable: UITableView!
     
@@ -49,6 +49,33 @@ class FilterList: UIViewController, UITableViewDelegate, UITableViewDataSource, 
         // Dispose of any resources that can be recreated.
     }
     
+    // Filtered search function with selected filters
+    @IBAction func filteredSearch(_ sender: Any) {
+        self.navigationController?.popViewController(animated: true)
+        var finalSelectedCategories = [String]()
+        for (index, isSelected) in selectedCategory {
+            if isSelected {
+                finalSelectedCategories.append(categoryArray[index]["code"]!)
+            }
+        }
+        filterValue["categories"] = finalSelectedCategories as AnyObject
+        // Delegate to send selected filters to RestaurantList
+        delegate?.filterList(updatedValue: filterValue)
+    }
+    
+    /*
+    // MARK: - Navigation
+
+    // In a storyboard-based application, you will often want to do a little preparation before navigation
+    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
+        // Get the new view controller using segue.destinationViewController.
+        // Pass the selected object to the new view controller.
+    }
+    */
+
+}
+
+extension FilterList: UITableViewDelegate, UITableViewDataSource {
     func numberOfSections(in tableView: UITableView) -> Int {
         return sectionArray.count
     }
@@ -254,7 +281,9 @@ class FilterList: UIViewController, UITableViewDelegate, UITableViewDataSource, 
             }
         }
     }
-    
+}
+
+extension FilterList: DistanceCellDelegate {
     // Delegate from DistanceCell to check whenever the arrow is clicked to expand the hidden options
     func distanceCell(dropCell: DistanceCell, didClick imageClicked: UIImage) {
         if let index = filterTable.indexPath(for: dropCell) {
@@ -277,7 +306,9 @@ class FilterList: UIViewController, UITableViewDelegate, UITableViewDataSource, 
         }
         didDistanceClicked = true
     }
-    
+}
+
+extension FilterList: SortByCellDelegate {
     // Delegate from SortByCell to check whenever the arrow is clicked to expand the hidden options
     func sortByCell(dropCell: SortByCell, didClick imageClicked: UIImage) {
         if let index = filterTable.indexPath(for: dropCell) {
@@ -300,7 +331,9 @@ class FilterList: UIViewController, UITableViewDelegate, UITableViewDataSource, 
         }
         didSortByClicked = true
     }
-    
+}
+
+extension FilterList: SwitchCellDelegate {
     // Delegate from SwitchCell to get bool value whenever the swith is togged
     func switchCell(switchCell: SwitchCell, didSwitch value: Bool) {
         let index = filterTable.indexPath(for: switchCell)
@@ -311,29 +344,4 @@ class FilterList: UIViewController, UITableViewDelegate, UITableViewDataSource, 
             selectedCategory[index!.row] = value
         }
     }
-    
-    // Filtered search function with selected filters
-    @IBAction func filteredSearch(_ sender: Any) {
-        self.navigationController?.popViewController(animated: true)
-        var finalSelectedCategories = [String]()
-        for (index, isSelected) in selectedCategory {
-            if isSelected {
-                finalSelectedCategories.append(categoryArray[index]["code"]!)
-            }
-        }
-        filterValue["categories"] = finalSelectedCategories as AnyObject
-        // Delegate to send selected filters to RestaurantList
-        delegate?.filterList(updatedValue: filterValue)
-    }
-    
-    /*
-    // MARK: - Navigation
-
-    // In a storyboard-based application, you will often want to do a little preparation before navigation
-    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
-        // Get the new view controller using segue.destinationViewController.
-        // Pass the selected object to the new view controller.
-    }
-    */
-
 }
